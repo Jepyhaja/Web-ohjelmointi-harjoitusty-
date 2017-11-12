@@ -1,3 +1,64 @@
+// variable for holding storedata
+var alkoJSON;
+var distances = [];
+var sortedDistances;
+
+// when document is ready, call ajax to fill alkoJSON variable with storedata
+// this way we dont have to call ajax every time we want to access storedata.
+$(document).ready(function(){
+  $.ajax({
+    url: "data/alkot.json",
+    success: function(data){
+      console.log(data);
+      alkoJSON = data;
+      calculateDistances();
+    }
+  }).fail(function(){
+    console.log("something went wrong when loading alkot.json");
+  })
+});
+
+// function calculating distances between users location (jyväskylä atm), and the various ALKO-stores
+function calculateDistances(){
+ $.each(alkoJSON.stores, function(index,store){
+   //read latitude and longitude
+   let latitude = store.latitude;
+   let longtitude = store.longitude;
+   
+   // hard-coded user "location" lat: 62.242603, lng: 25.747257
+   // use function distance to get the distance
+   var rawdistance = distance(latitude, longtitude, 62.242603, 25.747257);
+   
+   // round the distance to 2 decimals
+   var rounded = rawdistance.toFixed(2);
+   
+   //push result to array for later use.
+   distances.push({distance: rounded, storeName: store.name, storeID: store.storeId});
+  });
+  
+  // sort the data to be distance ascending. (lowest first)
+  sortedDistances = distances.sort(function(a, b) {
+    return a.distance - b.distance;
+  });
+  console.log(sortedDistances);
+  
+  //once distances have been calculated, show them on the page.
+  displayNearbyAlkos(10);
+}
+
+
+// function to display nearest alkos.
+function displayNearbyAlkos(a){
+  
+  for (var i = 0; i < a; i++){
+    let distance = sortedDistances[i].distance;
+    let name = sortedDistances[i].storeName;
+    let id = sortedDistances[i].storeID;
+    
+    $("#distances").append("<p>" + distance + "km " + name + " ID:" + id + "</p>");
+  }
+}
+
 // distance between 2 points
 // https://stackoverflow.com/questions/27928/calculate-distance-between-two-latitude-longitude-points-haversine-formula
 function distance(lat1, lon1, lat2, lon2) {
@@ -10,21 +71,21 @@ function distance(lat1, lon1, lat2, lon2) {
 }
 
 
-
 //create map
   var map;
   function initMap() {
-    map = new google.maps.Map(document.getElementById('map'), {
-      center: {lat: 62.242603, lng: 25.747257},
-      zoom: 14
+        map = new google.maps.Map(document.getElementById('map'), {
+          center: {lat: 62.242603, lng: 25.747257},
+          zoom: 14
+        });
+        var contentString = "";
+    // info window will display above content string
+    var infowindow = new google.maps.InfoWindow({
+        content: contentString
     });
-    var contentString = "";
-// info window will display above content string
-var infowindow = new google.maps.InfoWindow({
-    content: contentString
-});
-
+    
     //add markers
+    // THIS AJAX BELOW SHOULD BE REMOVED BECAUSE THE DATA IS ALREADY STORED IN alkoJSON variable
    $.ajax({
      url: 'data/alkot.json'
    }).fail(function(){
