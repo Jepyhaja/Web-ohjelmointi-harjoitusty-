@@ -2,60 +2,49 @@
 var alkoJSON;
 var distances = [];
 var sortedDistances;
-
-// when document is ready, call ajax to fill alkoJSON variable with storedata
-// this way we dont have to call ajax every time we want to access storedata.
-$(document).ready(function(){
-  $.ajax({
-    url: "data/alkot.json",
-    success: function(data){
-      console.log(data);
-      alkoJSON = data;
-      calculateDistances();
-    }
-  }).fail(function(){
-    console.log("something went wrong when loading alkot.json");
-  })
-});
-
+// variable for closest stores
+var closest = { stores: []};
 // function calculating distances between users location (jyväskylä atm), and the various ALKO-stores
 function calculateDistances(){
  $.each(alkoJSON.stores, function(index,store){
    //read latitude and longitude
    let latitude = store.latitude;
    let longtitude = store.longitude;
-   
+
    // hard-coded user "location" lat: 62.242603, lng: 25.747257
    // use function distance to get the distance
    var rawdistance = distance(latitude, longtitude, 62.242603, 25.747257);
-   
+
    // round the distance to 2 decimals
    var rounded = rawdistance.toFixed(2);
-   
-   //push result to array for later use.
-   distances.push({distance: rounded, storeName: store.name, storeID: store.storeId});
+
+   // push result to array for later use.
+   distances.push({distance: rounded, storeName: store.name, lat: latitude, lng: longtitude, phone:store.phone, type:store.outletTypeId, address: store.address, open:store.OpenDay0, link: store.link});
   });
-  
+
   // sort the data to be distance ascending. (lowest first)
   sortedDistances = distances.sort(function(a, b) {
     return a.distance - b.distance;
   });
   console.log(sortedDistances);
-  
-  //once distances have been calculated, show them on the page.
+
+  // once distances have been calculated, make marker out of them
   displayNearbyAlkos(10);
 }
 
-
-// function to display nearest alkos.
+// function to make array of nearest alkos for set amount of markers.
 function displayNearbyAlkos(a){
-  
+
   for (var i = 0; i < a; i++){
     let distance = sortedDistances[i].distance;
     let name = sortedDistances[i].storeName;
-    let id = sortedDistances[i].storeID;
-    
-    $("#distances").append("<p>" + distance + "km " + name + " ID:" + id + "</p>");
+    let phone = sortedDistances[i].phone;
+    let type = sortedDistances[i].type;
+    let address = sortedDistances[i].address;
+    let open = sortedDistances[i].open;
+    let link = sortedDistances[i].link;
+    let storeloc = {lat: sortedDistances[i].lat, lng:sortedDistances[i].lng};
+    closest.stores.push({distance:distance, storeName:name, location:storeloc, phone: phone, type:type, address:address, open:open, link:link});
   }
 }
 
@@ -64,14 +53,14 @@ function displayNearbyAlkos(a){
 function distance(lat1, lon1, lat2, lon2) {
   var p = 0.017453292519943295;    // Math.PI / 180
   var c = Math.cos;
-  var a = 0.5 - c((lat2 - lat1) * p)/2 + 
-          c(lat1 * p) * c(lat2 * p) * 
+  var a = 0.5 - c((lat2 - lat1) * p)/2 +
+          c(lat1 * p) * c(lat2 * p) *
           (1 - c((lon2 - lon1) * p))/2;
   return 12742 * Math.asin(Math.sqrt(a)); // 2 * R; R = 6371 km
 }
 
 
-//create map
+// create map
   var map;
   function initMap() {
         map = new google.maps.Map(document.getElementById('map'), {
@@ -83,36 +72,40 @@ function distance(lat1, lon1, lat2, lon2) {
     var infowindow = new google.maps.InfoWindow({
         content: contentString
     });
-    
-    //add markers
-    // THIS AJAX BELOW SHOULD BE REMOVED BECAUSE THE DATA IS ALREADY STORED IN alkoJSON variable
+    // call ajax here to fill alkoJSON variable with storedata and to run distance calculations
+    // this way we dont have to call ajax every time we want to access storedata.
    $.ajax({
-     url: 'data/alkot.json'
+     url: 'data/alkot.json',
+     success: function(data){
+       console.log(data);
+       alkoJSON = data;
+       calculateDistances();
+     }
    }).fail(function(){
      console.log("failed to load alkot.json!");
    }).done(function(data){
      console.log("loaded");
-     $.each(data.stores, function(index,store){
-       //read latitude and longitude
-       var storeLatLng = {lat: store.latitude, lng: store.longitude};
+     // read the array of closest markers set to 10 markers atm
+     $.each(closest.stores, function(index,store){
+       // read latitude and longitude
+       var storeloc = store.location;
        var storetype = "";
-       //create marker
+       if(store.type != "outletType_myymalat"){
+         storetype = "noutopiste";
+       }
+       // create marker
        var marker = new google.maps.Marker({
-         position: storeLatLng,
+         position: storeloc,
          map: map,
-         //all the additional data goes here -> will be shown when marker is focused
-         //actual formating of this data "marker.addListener -> infowindow.setContent"
-         title: store.name,
-         type: store.outletTypeId,
-         open1: store.OpenDay0,
-         open2: store.OpenDay1,
+         // all the additional data goes here -> will be shown when marker is focused
+         // actual formating of this data "marker.addListener -> infowindow.setContent"
+         title: store.storeName,
+         storetype: storetype,
+         open1: store.open,
          address: store.address,
-         phone: store.phone,
-         link: store.link
+         link: store.link,
+         phone: store.phone
         });
-        if (store.outletTypeId != "outletType_myymalat"){
-          var storetype = "Noutopiste"
-        }
         marker.setIcon('http://maps.google.com/mapfiles/ms/icons/blue-dot.png');
         marker.addListener('click', function() {
                     infowindow.setContent(
@@ -122,13 +115,11 @@ function distance(lat1, lon1, lat2, lon2) {
                         '<h3 class="info">Katuosoite: '+this.address+'</h3>'+
                         '<a href="'+this.link+'" class="link">Valikoimaan</a>'+
                         '<p class="info">Puh: '+this.phone+'</p>'+
-
-
                         '</div>'
                     );
                     // show info window
                     infowindow.open(map, this);
                   });
      }); // jQ each
-   }); //ajax done
- }//init map
+   }); // ajax done
+ }// init map
