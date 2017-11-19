@@ -14,7 +14,7 @@ function calculateDistances(){
 
    // hard-coded user "location" lat: 62.242603, lng: 25.747257
    // use function distance to get the distance
-   var rawdistance = distance(latitude, longtitude, currentPos[0].lat, currentPos[0].lng);
+   var rawdistance = distance(latitude, longtitude, 62.242603, 25.747257);
 
    // round the distance to 2 decimals
    var rounded = rawdistance.toFixed(2);
@@ -33,7 +33,7 @@ function calculateDistances(){
   displayNearbyAlkos(10);
 }
 
-
+/*
 // calc and display route
 function calculateAndDisplayRoute(directionsService, directionsDisplay) {
         var infowindow2;
@@ -59,7 +59,7 @@ function calculateAndDisplayRoute(directionsService, directionsDisplay) {
             }
         });
 }
-
+*/
 // function to make array of nearest alkos for set amount of markers.
 function displayNearbyAlkos(a){
 
@@ -147,7 +147,7 @@ function handleLocationError(browserHasGeolocation, infoWindow, pos) {
        alkoJSON = data;
        console.log(currentPos[0])
        calculateDistances();
-       calculateAndDisplayRoute(directionsService, directionsDisplay);
+       //calculateAndDisplayRoute(directionsService, directionsDisplay);
        console.log(currentPos);
      }
    }).fail(function(){
