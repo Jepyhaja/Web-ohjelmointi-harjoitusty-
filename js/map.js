@@ -28,8 +28,35 @@ function calculateDistances(){
   });
   console.log(sortedDistances);
 
-  // once distances have been calculated, make marker out of them
+  // once distances have been calculated, make markers out of them
   displayNearbyAlkos(10);
+}
+
+var currentPos = { whereBoi: []};
+// calc and display route
+function calculateAndDisplayRoute(directionsService, directionsDisplay) {
+        var infowindow2;
+        // get route
+        directionsService.route({
+            origin: currentPos.lat + ',' + currentPos.lng,
+            destination: sortedDistances[0].address,
+            travelMode: 'WALKING'
+        }, function(response, status) {
+            console.log(response);
+            if (status === 'OK') {
+                // display route
+                directionsDisplay.setDirections(response);
+
+                // show distance and duration in a info window
+                infowindow2.setContent(response.routes[0].legs[0].distance.text + "<br>" + response.routes[0].legs[0].duration.text + " ");
+                infowindow2.setPosition(response.routes[0].legs[0].end_location);
+                infowindow2.open(map);
+
+            } else {
+                console.log('Directions request failed due to ' + status);
+                console.log(currentPos);
+            }
+        });
 }
 
 // function to make array of nearest alkos for set amount of markers.
@@ -63,12 +90,15 @@ function distance(lat1, lon1, lat2, lon2) {
 // create map
   var map;
   function initMap() {
+        var directionsService = new google.maps.DirectionsService();
+        var directionsDisplay = new google.maps.DirectionsRenderer();
+
         map = new google.maps.Map(document.getElementById('map'), {
           center: {lat: 62.242603, lng: 25.747257},
-          zoom: 14
+          zoom: 12
         });
-    
-    infoWindow = new google.maps.InfoWindow;
+
+  infoWindow = new google.maps.InfoWindow;
 
   // Try HTML5 geolocation.
   if (navigator.geolocation) {
@@ -78,10 +108,13 @@ function distance(lat1, lon1, lat2, lon2) {
         lng: position.coords.longitude
       };
 
+      currentPos.whereBoi.push({lat:62.24, lng:25.7});
+
       infoWindow.setPosition(pos);
       infoWindow.setContent('Olet tässä.');
       infoWindow.open(map);
       map.setCenter(pos);
+
     }, function() {
       handleLocationError(true, infoWindow, map.getCenter());
     });
@@ -97,11 +130,8 @@ function handleLocationError(browserHasGeolocation, infoWindow, pos) {
                         'Error: Your browser doesn\'t support geolocation.');
   infoWindow.open(map);
 }
-    
-    
-    
-    
-        var contentString = "";
+
+    var contentString = "";
     // info window will display above content string
     var infowindow = new google.maps.InfoWindow({
         content: contentString
@@ -114,6 +144,8 @@ function handleLocationError(browserHasGeolocation, infoWindow, pos) {
        console.log(data);
        alkoJSON = data;
        calculateDistances();
+       calculateAndDisplayRoute(directionsService, directionsDisplay);
+       console.log(currentPos);
      }
    }).fail(function(){
      console.log("failed to load alkot.json!");
@@ -140,7 +172,7 @@ function handleLocationError(browserHasGeolocation, infoWindow, pos) {
          link: store.link,
          phone: store.phone
         });
-        marker.setIcon('http://maps.google.com/mapfiles/ms/icons/blue-dot.png');
+        marker.setIcon('https://copypaste.win/alko_wip/images/markeri.svg');
         marker.addListener('click', function() {
                     infowindow.setContent(
                         '<div class="content">'+

@@ -5,7 +5,8 @@
   width: 60%;
 }
 html, body {
+  font-family: 'Barlow Condensed', sans-serif;
   height: 100%;
-  margin: 0;
+  margin: auto;
   padding: 0;
 }
