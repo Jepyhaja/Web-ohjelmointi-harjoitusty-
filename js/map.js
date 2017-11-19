@@ -1,3 +1,5 @@
+
+
 // variable for holding storedata
 var alkoJSON;
 var distances = [];
@@ -6,6 +8,61 @@ var sortedDistances;
 var closest = { stores: []};
 var currentPos = [];
 var gotLocation = false;
+var directionsService;
+var directionsDisplay;
+// create map
+  var map;
+  function initMap() {
+        // connect direction service
+        directionsService = new google.maps.DirectionsService();
+        // connect directions renderer
+        directionsDisplay = new google.maps.DirectionsRenderer();
+        map = new google.maps.Map(document.getElementById('map'), {
+          center: {lat: 62.242603, lng: 25.747257},
+          zoom: 12
+        });
+        directionsDisplay.setMap(map);
+        infoWindow = new google.maps.InfoWindow;
+
+    // call ajax here to fill alkoJSON variable with storedata and to run distance calculations
+    // this way we dont have to call ajax every time we want to access storedata.
+   $.ajax({
+     url: 'data/alkot.json',
+     success: function(data){
+       alkoJSON = data;
+       console.log("initmap() currentPos[0] = " + currentPos[0]);
+       //consists of 3 major parts!
+         getLocation();
+       //calculateAndDisplayRoute(directionsService, directionsDisplay);
+       console.log("initmap()  currentPos =  " + currentPos);
+     }
+   }).fail(function(){
+     console.log("initmap() " + "failed to load alkot.json!");
+   }).done(function(data){
+     console.log("initmap() " + "loaded");
+   });
+ }
+
+/*
+// init map
+function initMap() {
+    // connect direction service
+    var directionsService = new google.maps.DirectionsService();
+    // connect directions renderer
+    var directionsDisplay = new google.maps.DirectionsRenderer();
+    // create a map
+    var map = new google.maps.Map(document.getElementById('map'), {
+        center: {lat: 62.2426034, lng: 25.7472567},
+        zoom: 4
+    });
+    // create info window
+    infowindow = new google.maps.InfoWindow();
+    // use map in directions display
+    directionsDisplay.setMap(map);
+    // show button event handling
+    //calculateAndDisplayRoute(directionsService, directionsDisplay, map);
+}
+*/
 // function calculating distances between users location (jyväskylä atm), and the various ALKO-store
 // part 3 runs in displayNearbyAlkos!
 function calculateDistances(){
@@ -29,39 +86,33 @@ function calculateDistances(){
   sortedDistances = distances.sort(function(a, b) {
     return a.distance - b.distance;
   });
+  console.log("calculateDistances() sortedDistances = ");
   console.log(sortedDistances);
 
   // once distances have been calculated, make markers out of them
   displayNearbyAlkos(10);
 }
 
-/*
+
 // calc and display route
-function calculateAndDisplayRoute(directionsService, directionsDisplay) {
-        var infowindow2;
-        // get route
-        directionsService.route({
-            origin: currentPos[0].lat + ',' + currentPos[0].lng,
-            destination: sortedDistances[0].lat + ',' + sortedDistances[0].lng,
-            travelMode: 'WALKING'
-        }, function(response, status) {
-            console.log(response);
-            if (status === 'OK') {
-                // display route
-                directionsDisplay.setDirections(response);
-
-                // show distance and duration in a info window
-                infowindow2.setContent(response.routes[0].legs[0].distance.text + "<br>" + response.routes[0].legs[0].duration.text + " ");
-                infowindow2.setPosition(response.routes[0].legs[0].end_location);
-                infowindow2.open(map);
-
-            } else {
-                console.log('Directions request failed due to ' + status);
-                console.log(currentPos);
-            }
-        });
+function calculateAndDisplayRoute(directionsService, directionsDisplay, map) {
+    var selectedMode = "WALKING";
+    // get route
+    directionsService.route({
+        origin: currentPos[0].lat + "," + currentPos[0].lng,
+        destination: closest.stores[0].location.lat + "," + closest.stores[0].location.lng,
+        travelMode: google.maps.TravelMode[selectedMode]
+    }, function(response, status) {
+        console.log("calculateAndDisplayRoute() " + response); // MUISTA tutustua datarakenteeseen Console-ikkunan kautta!!
+        if (status === 'OK') {
+            // display route
+            directionsDisplay.setDirections(response);
+        } else {
+            console.log('Directions request failed due to ' + status);
+        }
+    });
 }
-*/
+
 // function to make array of nearest alkos for set amount of markers.
 function displayNearbyAlkos(a){
 
@@ -76,6 +127,8 @@ function displayNearbyAlkos(a){
     let storeloc = {lat: sortedDistances[i].lat, lng:sortedDistances[i].lng};
     closest.stores.push({distance:distance, storeName:name, location:storeloc, phone: phone, type:type, address:address, open:open, link:link});
   }
+  console.log("closest stores :");
+  console.log(closest.stores);
 //now we have array of the 10 closest alkos
 //now we call drawMarkers to draw the actual markers
 //display nearby alkos must run first!!!
@@ -123,7 +176,7 @@ $.each(closest.stores, function(index,store){
     link: store.link,
     phone: store.phone
    });
-   marker.setIcon('https://copypaste.win/alko_wip/images/markeri.svg');
+   marker.setIcon('../images/markeri.svg');
    marker.addListener('click', function() {
                infowindow.setContent(
                    '<div class="content">'+
@@ -137,10 +190,12 @@ $.each(closest.stores, function(index,store){
                // show info window
                infowindow.open(map, this);
              });
-}); // jQ each
+});
+console.log("markers drawn.");
+calculateAndDisplayRoute(directionsService, directionsDisplay, map);
 };
 //Part 1
-// Try HTML5 geolocation. Must run before any other functions that need user position!!!!
+// HTML5 geolocation. Must run before any other functions that need user position!!!!
 function getLocation(){
   if (navigator.geolocation) {
     navigator.geolocation.getCurrentPosition(function(position) {
@@ -148,9 +203,8 @@ function getLocation(){
         lat: position.coords.latitude,
         lng: position.coords.longitude
       };
-      console.log(pos.lat);
-
       currentPos.push({lat: pos.lat,lng:pos.lng});
+      console.log("getLocation() currentPos = ");
       console.log(currentPos);
 
       infoWindow.setPosition(pos);
@@ -176,37 +230,3 @@ function handleLocationError(browserHasGeolocation, infoWindow, pos) {
                         'Error: Your browser doesn\'t support geolocation.');
   infoWindow.open(map);
 }
-
-
-
-// create map
-  var map;
-  function initMap() {
-        var directionsService = new google.maps.DirectionsService();
-        var directionsDisplay = new google.maps.DirectionsRenderer();
-
-        map = new google.maps.Map(document.getElementById('map'), {
-          center: {lat: 62.242603, lng: 25.747257},
-          zoom: 12
-        });
-
-        infoWindow = new google.maps.InfoWindow;
-
-    // call ajax here to fill alkoJSON variable with storedata and to run distance calculations
-    // this way we dont have to call ajax every time we want to access storedata.
-   $.ajax({
-     url: 'data/alkot.json',
-     success: function(data){
-       alkoJSON = data;
-       console.log(currentPos[0]);
-       //consists of 3 major parts!
-         getLocation();
-       //calculateAndDisplayRoute(directionsService, directionsDisplay);
-       console.log(currentPos);
-     }
-   }).fail(function(){
-     console.log("failed to load alkot.json!");
-   }).done(function(data){
-     console.log("loaded");
-   }); // ajax done
- }// init map
