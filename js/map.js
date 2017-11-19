@@ -97,6 +97,11 @@ function distance(lat1, lon1, lat2, lon2) {
 //Part 3
 //just draw the fucking markers will ya!?
 function drawMarkers(){
+  var contentString = "";
+  // info window will display above content string
+  var infowindow = new google.maps.InfoWindow({
+      content: contentString
+  });
 // read the array of closest markers set to 10 markers atm
 $.each(closest.stores, function(index,store){
   // read latitude and longitude
@@ -185,14 +190,8 @@ function handleLocationError(browserHasGeolocation, infoWindow, pos) {
           zoom: 12
         });
 
-  infoWindow = new google.maps.InfoWindow;
+        infoWindow = new google.maps.InfoWindow;
 
-
-    var contentString = "";
-    // info window will display above content string
-    var infowindow = new google.maps.InfoWindow({
-        content: contentString
-    });
     // call ajax here to fill alkoJSON variable with storedata and to run distance calculations
     // this way we dont have to call ajax every time we want to access storedata.
    $.ajax({
