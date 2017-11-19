@@ -33,7 +33,7 @@ function calculateDistances(){
   displayNearbyAlkos(10);
 }
 
-/*
+/* yes
 // calc and display route
 function calculateAndDisplayRoute(directionsService, directionsDisplay) {
         var infowindow2;
