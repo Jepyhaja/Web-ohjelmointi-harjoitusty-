@@ -5,7 +5,9 @@ var sortedDistances;
 // variable for closest stores
 var closest = { stores: []};
 var currentPos = [];
-// function calculating distances between users location (jyväskylä atm), and the various ALKO-stores
+var gotLocation = false;
+// function calculating distances between users location (jyväskylä atm), and the various ALKO-store
+// part 3 runs in displayNearbyAlkos!
 function calculateDistances(){
  $.each(alkoJSON.stores, function(index,store){
    //read latitude and longitude
@@ -14,7 +16,7 @@ function calculateDistances(){
 
    // hard-coded user "location" lat: 62.242603, lng: 25.747257
    // use function distance to get the distance
-   var rawdistance = distance(latitude, longtitude, 62.242603, 25.747257);
+   var rawdistance = distance(latitude, longtitude, currentPos[0].lat, currentPos[0].lng);
 
    // round the distance to 2 decimals
    var rounded = rawdistance.toFixed(2);
@@ -74,6 +76,10 @@ function displayNearbyAlkos(a){
     let storeloc = {lat: sortedDistances[i].lat, lng:sortedDistances[i].lng};
     closest.stores.push({distance:distance, storeName:name, location:storeloc, phone: phone, type:type, address:address, open:open, link:link});
   }
+//now we have array of the 10 closest alkos
+//now we call drawMarkers to draw the actual markers
+//display nearby alkos must run first!!!
+  drawMarkers();
 }
 
 // distance between 2 points
@@ -88,20 +94,49 @@ function distance(lat1, lon1, lat2, lon2) {
 }
 
 
-// create map
-  var map;
-  function initMap() {
-        var directionsService = new google.maps.DirectionsService();
-        var directionsDisplay = new google.maps.DirectionsRenderer();
+//Part 3
+//just draw the fucking markers will ya!?
+function drawMarkers(){
+// read the array of closest markers set to 10 markers atm
+$.each(closest.stores, function(index,store){
+  // read latitude and longitude
+  var storeloc = store.location;
+  var storetype = "";
+  if(store.type != "outletType_myymalat"){
+    storetype = "noutopiste";
+  }
 
-        map = new google.maps.Map(document.getElementById('map'), {
-          center: {lat: 62.242603, lng: 25.747257},
-          zoom: 12
-        });
-
-  infoWindow = new google.maps.InfoWindow;
-
-  // Try HTML5 geolocation.
+  var marker = new google.maps.Marker({
+    position: storeloc,
+    map: map,
+    // all the additional data goes here -> will be shown when marker is focused
+    // actual formating of this data "marker.addListener -> infowindow.setContent"
+    title: store.storeName,
+    storetype: storetype,
+    open1: store.open,
+    address: store.address,
+    link: store.link,
+    phone: store.phone
+   });
+   marker.setIcon('https://copypaste.win/alko_wip/images/markeri.svg');
+   marker.addListener('click', function() {
+               infowindow.setContent(
+                   '<div class="content">'+
+                   '<h1 class="heading">'+this.title+' '+storetype+'</h1>'+
+                   '<h3 class="opentimes">Aukioloajat: Ma-La '+this.open1+'</h3>'+
+                   '<h3 class="info">Katuosoite: '+this.address+'</h3>'+
+                   '<a href="'+this.link+'" class="link">Valikoimaan</a>'+
+                   '<p class="info">Puh: '+this.phone+'</p>'+
+                   '</div>'
+               );
+               // show info window
+               infowindow.open(map, this);
+             });
+}); // jQ each
+};
+//Part 1
+// Try HTML5 geolocation. Must run before any other functions that need user position!!!!
+function getLocation(){
   if (navigator.geolocation) {
     navigator.geolocation.getCurrentPosition(function(position) {
       var pos = {
@@ -117,7 +152,10 @@ function distance(lat1, lon1, lat2, lon2) {
       infoWindow.setContent('Olet tässä.');
       infoWindow.open(map);
       map.setCenter(pos);
-
+      //Notice me senBOI
+      //Run calculateDistances after getLocation() is ready
+      //Call it right here you mofo.
+      calculateDistances();
     }, function() {
       handleLocationError(true, infoWindow, map.getCenter());
     });
@@ -125,7 +163,7 @@ function distance(lat1, lon1, lat2, lon2) {
     // Browser doesn't support Geolocation
     handleLocationError(false, infoWindow, map.getCenter());
   }
-
+};
 function handleLocationError(browserHasGeolocation, infoWindow, pos) {
   infoWindow.setPosition(pos);
   infoWindow.setContent(browserHasGeolocation ?
@@ -133,6 +171,22 @@ function handleLocationError(browserHasGeolocation, infoWindow, pos) {
                         'Error: Your browser doesn\'t support geolocation.');
   infoWindow.open(map);
 }
+
+
+
+// create map
+  var map;
+  function initMap() {
+        var directionsService = new google.maps.DirectionsService();
+        var directionsDisplay = new google.maps.DirectionsRenderer();
+
+        map = new google.maps.Map(document.getElementById('map'), {
+          center: {lat: 62.242603, lng: 25.747257},
+          zoom: 12
+        });
+
+  infoWindow = new google.maps.InfoWindow;
+
 
     var contentString = "";
     // info window will display above content string
@@ -145,8 +199,9 @@ function handleLocationError(browserHasGeolocation, infoWindow, pos) {
      url: 'data/alkot.json',
      success: function(data){
        alkoJSON = data;
-       console.log(currentPos[0])
-       calculateDistances();
+       console.log(currentPos[0]);
+       //consists of 3 major parts!
+         getLocation();
        //calculateAndDisplayRoute(directionsService, directionsDisplay);
        console.log(currentPos);
      }
@@ -154,41 +209,5 @@ function handleLocationError(browserHasGeolocation, infoWindow, pos) {
      console.log("failed to load alkot.json!");
    }).done(function(data){
      console.log("loaded");
-     // read the array of closest markers set to 10 markers atm
-     $.each(closest.stores, function(index,store){
-       // read latitude and longitude
-       var storeloc = store.location;
-       var storetype = "";
-       if(store.type != "outletType_myymalat"){
-         storetype = "noutopiste";
-       }
-       // create marker
-       var marker = new google.maps.Marker({
-         position: storeloc,
-         map: map,
-         // all the additional data goes here -> will be shown when marker is focused
-         // actual formating of this data "marker.addListener -> infowindow.setContent"
-         title: store.storeName,
-         storetype: storetype,
-         open1: store.open,
-         address: store.address,
-         link: store.link,
-         phone: store.phone
-        });
-        marker.setIcon('https://copypaste.win/alko_wip/images/markeri.svg');
-        marker.addListener('click', function() {
-                    infowindow.setContent(
-                        '<div class="content">'+
-                        '<h1 class="heading">'+this.title+' '+storetype+'</h1>'+
-                        '<h3 class="opentimes">Aukioloajat: Ma-La '+this.open1+'</h3>'+
-                        '<h3 class="info">Katuosoite: '+this.address+'</h3>'+
-                        '<a href="'+this.link+'" class="link">Valikoimaan</a>'+
-                        '<p class="info">Puh: '+this.phone+'</p>'+
-                        '</div>'
-                    );
-                    // show info window
-                    infowindow.open(map, this);
-                  });
-     }); // jQ each
    }); // ajax done
  }// init map
