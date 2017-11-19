@@ -4,6 +4,7 @@ var distances = [];
 var sortedDistances;
 // variable for closest stores
 var closest = { stores: []};
+var currentPos = [];
 // function calculating distances between users location (jyväskylä atm), and the various ALKO-stores
 function calculateDistances(){
  $.each(alkoJSON.stores, function(index,store){
@@ -13,7 +14,7 @@ function calculateDistances(){
 
    // hard-coded user "location" lat: 62.242603, lng: 25.747257
    // use function distance to get the distance
-   var rawdistance = distance(latitude, longtitude, 62.242603, 25.747257);
+   var rawdistance = distance(latitude, longtitude, currentPos[0].lat, currentPos[0].lng);
 
    // round the distance to 2 decimals
    var rounded = rawdistance.toFixed(2);
@@ -32,14 +33,14 @@ function calculateDistances(){
   displayNearbyAlkos(10);
 }
 
-var currentPos = { whereBoi: []};
+
 // calc and display route
 function calculateAndDisplayRoute(directionsService, directionsDisplay) {
         var infowindow2;
         // get route
         directionsService.route({
-            origin: currentPos.lat + ',' + currentPos.lng,
-            destination: sortedDistances[0].address,
+            origin: currentPos[0].lat + ',' + currentPos[0].lng,
+            destination: sortedDistances[0].lat + ',' + sortedDistances[0].lng,
             travelMode: 'WALKING'
         }, function(response, status) {
             console.log(response);
@@ -107,8 +108,10 @@ function distance(lat1, lon1, lat2, lon2) {
         lat: position.coords.latitude,
         lng: position.coords.longitude
       };
+      console.log(pos.lat);
 
-      currentPos.whereBoi.push({lat:62.24, lng:25.7});
+      currentPos.push({lat: pos.lat,lng:pos.lng});
+      console.log(currentPos);
 
       infoWindow.setPosition(pos);
       infoWindow.setContent('Olet tässä.');
@@ -141,8 +144,8 @@ function handleLocationError(browserHasGeolocation, infoWindow, pos) {
    $.ajax({
      url: 'data/alkot.json',
      success: function(data){
-       console.log(data);
        alkoJSON = data;
+       console.log(currentPos[0])
        calculateDistances();
        calculateAndDisplayRoute(directionsService, directionsDisplay);
        console.log(currentPos);
